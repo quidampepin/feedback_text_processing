@@ -326,6 +326,35 @@ for topic, topic_df in data_en_topic.groupby(1):
 for value in dict_en:
     dict_en[value] = tokenizer.tokenize(dict_en[value])
 
-#next steps
-#removing stop words and stemming
+
 #analyze words in comparison wth the others - tf-idf analysis
+#separate topics and words in 2 lists
+topic_list_en = []
+for keys in dict_en.keys():
+    topic_list_en.append(keys)
+
+topic_words_en = []
+for values in dict_en.values():
+    topic_words_en.append(values)
+
+#lower case, remove stop words and lemmatize
+topic_words_en = [[word.lower() for word in value] for value in topic_words_en]
+topic_words_en = [[lemmatizer.lemmatize(word) for word in value] for value in topic_words_en]
+topic_words_en = [[word for word in value if word not in sw] for value in topic_words_en]
+
+#Create dictionary of words in GenSim
+from gensim.corpora.dictionary import Dictionary
+dictionary = Dictionary(topic_words_en)
+
+#create corpus
+corpus = [dictionary.doc2bow(topic) for topic in topic_words_en]
+
+
+#code to for tf-idf for one topics
+from gensim.models.tfidfmodel import TfidfModel
+tfidf = TfidfModel(corpus)
+doc = corpus[19]
+tfidf_weights = tfidf[doc]
+sorted_tfidf_weights = sorted(tfidf_weights, key=lambda w: w[1], reverse=True)
+for term_id, weight in sorted_tfidf_weights[:10]:
+    print(dictionary.get(term_id), weight)
