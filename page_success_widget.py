@@ -308,24 +308,44 @@ data_en_topic = data_en_topic[data_en_topic.Topic != 'No details']
 data_en_topic = data_en_topic[data_en_topic.Topic != 'Feedback unclear']
 data_en_topic = data_en_topic.dropna()
 
+
+data_fr_topic = data_fr.drop(columns=['Date/time received', 'Page Title', 'Page URL', 'Y/N', "What's wrong", 'Personal info (Y/N)', 'Notes', 'Blank', 'Test - auto-topic generator'])
+
+data_fr_topic = data_fr_topic[data_fr_topic.Topic != 'No details']
+data_fr_topic = data_fr_topic[data_fr_topic.Topic != 'Feedback unclear']
+data_fr_topic = data_fr_topic.dropna()
+
 #separate topic in several columns
 
 data_en_topic = pd.concat([data_en_topic[['Details']], data_en_topic['Topic'].str.split(', ', expand=True)], axis=1)
+data_fr_topic = pd.concat([data_fr_topic[['Details']], data_fr_topic['Topic'].str.split(', ', expand=True)], axis=1)
 
 
 #create dictionary
 dict_en = {}
-for topic, topic_df in data_en_topic.groupby(0):
-    dict_en[topic] = ' '.join(topic_df['Details'].tolist())
+for topic, topic_df_en in data_en_topic.groupby(0):
+    dict_en[topic] = ' '.join(topic_df_en['Details'].tolist())
 
 
-for topic, topic_df in data_en_topic.groupby(1):
-    dict_en[topic] = ' '.join(topic_df['Details'].tolist())
+for topic, topic_df_en in data_en_topic.groupby(1):
+    dict_en[topic] = ' '.join(topic_df_en['Details'].tolist())
+
+
+dict_fr = {}
+for topic, topic_df_fr in data_fr_topic.groupby(0):
+    dict_fr[topic] = ' '.join(topic_df_fr['Details'].tolist())
+
+
+for topic, topic_df_fr in data_fr_topic.groupby(1):
+    dict_fr[topic] = ' '.join(topic_df_fr['Details'].tolist())
+
 
 #tokenize by topic
 for value in dict_en:
     dict_en[value] = tokenizer.tokenize(dict_en[value])
 
+for value in dict_fr:
+    dict_fr[value] = tokenizer.tokenize(dict_fr[value])
 
 #analyze words in comparison wth the others - tf-idf analysis
 #separate topics and words in 2 lists
@@ -333,28 +353,52 @@ topic_list_en = []
 for keys in dict_en.keys():
     topic_list_en.append(keys)
 
+topic_list_fr = []
+for keys in dict_fr.keys():
+    topic_list_fr.append(keys)
+
 topic_words_en = []
 for values in dict_en.values():
     topic_words_en.append(values)
 
+topic_words_fr = []
+for values in dict_fr.values():
+    topic_words_fr.append(values)
+
+
 #lower case, remove stop words and lemmatize
+from nltk.stem import WordNetLemmatizer
+lemmatizer = WordNetLemmatizer()
 topic_words_en = [[word.lower() for word in value] for value in topic_words_en]
 topic_words_en = [[lemmatizer.lemmatize(word) for word in value] for value in topic_words_en]
 topic_words_en = [[word for word in value if word not in sw] for value in topic_words_en]
 
+topic_words_fr = [[word.lower() for word in value] for value in topic_words_fr]
+topic_words_fr = [[lemmatizer.lemmatize(word) for word in value] for value in topic_words_fr]
+topic_words_fr = [[word for word in value if word not in swf] for value in topic_words_fr]
+
 #Create dictionary of words in GenSim
 from gensim.corpora.dictionary import Dictionary
-dictionary = Dictionary(topic_words_en)
+dictionary_en = Dictionary(topic_words_en)
+dictionary_fr = Dictionary(topic_words_fr)
 
 #create corpus
-corpus = [dictionary.doc2bow(topic) for topic in topic_words_en]
-
+corpus_en = [dictionary_en.doc2bow(topic) for topic in topic_words_en]
+corpus_fr = [dictionary_fr.doc2bow(topic) for topic in topic_words_fr]
 
 #code to for tf-idf for one topics
 from gensim.models.tfidfmodel import TfidfModel
-tfidf = TfidfModel(corpus)
-doc = corpus[19]
-tfidf_weights = tfidf[doc]
-sorted_tfidf_weights = sorted(tfidf_weights, key=lambda w: w[1], reverse=True)
-for term_id, weight in sorted_tfidf_weights[:10]:
-    print(dictionary.get(term_id), weight)
+tfidf_en = TfidfModel(corpus_en)
+doc_en = corpus_en[0]
+tfidf_weights_en = tfidf_en[doc_en]
+sorted_tfidf_weights_en = sorted(tfidf_weights_en, key=lambda w: w[1], reverse=True)
+for term_id, weight in sorted_tfidf_weights_en[:10]:
+    print(dictionary_en.get(term_id), weight)
+
+from gensim.models.tfidfmodel import TfidfModel
+tfidf_fr = TfidfModel(corpus_fr)
+doc_fr = corpus_fr[0]
+tfidf_weights_fr = tfidf_fr[doc_fr]
+sorted_tfidf_weights_fr = sorted(tfidf_weights_fr, key=lambda w: w[1], reverse=True)
+for term_id, weight in sorted_tfidf_weights_fr[:10]:
+    print(dictionary_fr.get(term_id), weight)
