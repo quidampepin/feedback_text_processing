@@ -389,16 +389,20 @@ corpus_fr = [dictionary_fr.doc2bow(topic) for topic in topic_words_fr]
 #code to for tf-idf for one topics
 from gensim.models.tfidfmodel import TfidfModel
 tfidf_en = TfidfModel(corpus_en)
-doc_en = corpus_en[0]
-tfidf_weights_en = tfidf_en[doc_en]
-sorted_tfidf_weights_en = sorted(tfidf_weights_en, key=lambda w: w[1], reverse=True)
-for term_id, weight in sorted_tfidf_weights_en[:10]:
-    print(dictionary_en.get(term_id), weight)
 
-from gensim.models.tfidfmodel import TfidfModel
 tfidf_fr = TfidfModel(corpus_fr)
-doc_fr = corpus_fr[0]
-tfidf_weights_fr = tfidf_fr[doc_fr]
-sorted_tfidf_weights_fr = sorted(tfidf_weights_fr, key=lambda w: w[1], reverse=True)
-for term_id, weight in sorted_tfidf_weights_fr[:10]:
-    print(dictionary_fr.get(term_id), weight)
+
+tfidf_weights_en = [sorted(tfidf_en[doc], key=lambda w: w[1], reverse=True) for doc in corpus_en]
+tfidf_weights_fr = [sorted(tfidf_fr[doc], key=lambda w: w[1], reverse=True) for doc in corpus_fr]
+
+weighted_words_en = [[(dictionary_en.get(id), weight) for id, weight in ar] for ar in tfidf_weights_en]
+weighted_words_fr = [[(dictionary_fr.get(id), weight) for id, weight in ar] for ar in tfidf_weights_fr]
+
+import csv
+with open('weighted_words_en.csv', 'w') as f:
+    writer = csv.writer(f)
+    writer.writerows(zip(topic_list_en, weighted_words_en))
+
+with open('weighted_words_fr.csv', 'w') as f:
+    writer = csv.writer(f)
+    writer.writerows(zip(topic_list_fr, weighted_words_fr))
