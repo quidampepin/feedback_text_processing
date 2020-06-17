@@ -302,7 +302,7 @@ plt.clf()
 
 
 #separate feedback by topic
-data_en_topic = data_en.drop(columns=['Date/time received', 'Page Title', 'Page URL', 'Y/N', "What's wrong", 'Personal info (Y/N)', 'Notes', 'Blank', 'Test - auto-topic generator'])
+data_en_topic= data_en.drop(columns=['Date/time received', 'Page Title', 'Page URL', 'Y/N', "What's wrong", 'Personal info (Y/N)', 'Notes', 'Blank', 'Test - auto-topic generator'])
 
 data_en_topic = data_en_topic[data_en_topic.Topic != 'No details']
 data_en_topic = data_en_topic[data_en_topic.Topic != 'Feedback unclear']
@@ -406,3 +406,55 @@ with open('weighted_words_en.csv', 'w') as f:
 with open('weighted_words_fr.csv', 'w') as f:
     writer = csv.writer(f)
     writer.writerows(zip(topic_list_fr, weighted_words_fr))
+
+
+#Autotagging
+#build training and testing sets from manually tagged data_en
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.model_selection import train_test_split
+
+
+data_en_topic_1 = data_en_topic.drop(columns=[1])
+data_en_topic_1  = data_en_topic_1.rename(columns={'Details': 'Feedback', 0: 'label'})
+y = data_en_topic_1.label
+
+X_train, X_test, y_train, y_test = train_test_split(data_en_topic_1["Feedback"], y, test_size=0.1, random_state=53)
+tfidf_vectorizer = TfidfVectorizer(stop_words="english", max_df=0.7)
+tfidf_train = tfidf_vectorizer.fit_transform(X_train)
+tfidf_test = tfidf_vectorizer.transform(X_test)
+from sklearn.naive_bayes import MultinomialNB
+nb_classifier = MultinomialNB(0.6)
+nb_classifier.fit(tfidf_train, y_train)
+pred = nb_classifier.predict(tfidf_test)
+score = metrics.accuracy_score(y_test, pred)
+print(score)
+
+pred_topic_en = data_en[data_en.Topic != 'No details']
+X_pred_en = pred_topic_en['Details']
+count_pred_en = count_vectorizer.transform(X_pred_en)
+pred_en = nb_classifier.predict(count_pred_en)
+pred_topic_en["Predited_topic"] = pred_en
+pred_topic_en.to_csv('predicted_en.csv')
+
+
+data_fr_topic_1 = data_fr_topic.drop(columns=[1])
+data_fr_topic_1  = data_fr_topic_1.rename(columns={'Details': 'Feedback', 0: 'label'})
+y = data_fr_topic_1.label
+
+X_train, X_test, y_train, y_test = train_test_split(data_fr_topic_1["Feedback"], y, test_size=0.1, random_state=53)
+tfidf_vectorizer = TfidfVectorizer(stop_words=swf, max_df=0.7)
+tfidf_train = tfidf_vectorizer.fit_transform(X_train)
+tfidf_test = tfidf_vectorizer.transform(X_test)
+from sklearn.naive_bayes import MultinomialNB
+nb_classifier = MultinomialNB(0.6)
+nb_classifier.fit(tfidf_train, y_train)
+pred = nb_classifier.predict(tfidf_test)
+score = metrics.accuracy_score(y_test, pred)
+print(score)
+
+pred_topic_fr = data_fr[data_fr.Topic != 'No details']
+X_pred_fr = pred_topic_fr['Details']
+count_pred_fr = count_vectorizer.transform(X_pred_fr)
+pred_fr = nb_classifier.predict(count_pred_fr)
+pred_topic_fr["Predited_topic"] = pred_fr
+pred_topic_fr.to_csv('predicted_fr.csv')
