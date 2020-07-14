@@ -406,3 +406,23 @@ with open('weighted_words_en.csv', 'w') as f:
 with open('weighted_words_fr.csv', 'w') as f:
     writer = csv.writer(f)
     writer.writerows(zip(topic_list_fr, weighted_words_fr))
+
+
+
+X_train, X_test, y_train, y_test = train_test_split(data_fr_topic_1["Feedback"], y, test_size=0.1, random_state=53)
+tfidf_vectorizer = TfidfVectorizer(stop_words=swf, max_df=0.7)
+tfidf_train = tfidf_vectorizer.fit_transform(X_train)
+tfidf_test = tfidf_vectorizer.transform(X_test)
+from sklearn.naive_bayes import MultinomialNB
+nb_classifier = MultinomialNB(0.6)
+nb_classifier.fit(tfidf_train, y_train)
+pred = nb_classifier.predict(tfidf_test)
+score = metrics.accuracy_score(y_test, pred)
+print(score)
+
+pred_topic_fr = data_fr[data_fr.Topic != 'No details']
+X_pred_fr = pred_topic_fr['Details']
+tfidf_pred_fr = tfidf_vectorizer.transform(X_pred_fr)
+pred_fr = nb_classifier.predict(tfidf_pred_fr)
+pred_topic_fr["Predicted_topic"] = pred_fr
+pred_topic_fr.to_csv('predicted_fr.csv')
